@@ -1,8 +1,4 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -25,19 +21,17 @@ public class MainManager : MonoBehaviour
 
     public bool m_GameOver = false;
     public int bestScore;
-
+    public Image imagePanel;
 
     // Start is called before the first frame update
     void Start()
     {
-        //LoadBestScore();
+        UpdateUI();
+        InstantiateBricks();
+    }
 
-        if (DataManager.Instance != null)
-        {
-            currentPlayer = DataManager.Instance.currentPlayer;
-            userWelcome.text = $"Welcome {currentPlayer}";
-        }
-
+    private void InstantiateBricks()
+    {
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
 
@@ -52,6 +46,43 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+    }
+
+    private void UpdateUI()
+    {
+        if (DataManager.Instance != null)
+        {
+            currentPlayer = DataManager.Instance.currentPlayer;
+            bestScore = DataManager.Instance.bestScore;
+            bestPlayer = DataManager.Instance.bestPlayer;
+
+            if (bestScore > 0 && currentPlayer != bestPlayer)
+            {
+                userWelcome.text = $"Welcome {currentPlayer}, you'll have to beat {bestPlayer} if you want to become the king of this game";
+                bestScoreText.text = $"Best Score: {bestPlayer}: {bestScore}";
+                ImageRandomColor(imagePanel, Color.red);
+            }
+
+            else if (bestScore > 0 && currentPlayer == bestPlayer)
+            {
+                userWelcome.text = $"Nicely done {currentPlayer}, you are our best player";
+                bestScoreText.text = $"Best Score: {bestPlayer}: {bestScore}";
+                ImageRandomColor(imagePanel, Color.blue);
+            }
+
+            else
+            {
+                userWelcome.text = $"Welcome {currentPlayer}, let's see what you can do";
+                bestScoreText.text = $"Best Score: {bestPlayer}: {bestScore}";
+                ImageRandomColor(imagePanel, Color.cyan);
+            }
+
+        }
+    }
+
+    public void ImageRandomColor(Image imagePanel, Color mycolor)
+    {
+        imagePanel.color = mycolor;
     }
 
     private void Update()
@@ -90,46 +121,34 @@ public class MainManager : MonoBehaviour
         GameOverText.SetActive(true);
     }
 
-
     public void BestScore()
     {
+        //Checks if the current score is higher than bestscore. If higher, save data.
         if (m_Points > bestScore)
         {
-            bestScore = m_Points;
-            bestPlayer = DataManager.Instance.currentPlayer;
-            bestScoreText.text = $"Best Score: {bestScore}: {bestPlayer}";
+            DataManager.Instance.bestScore = m_Points;
+            DataManager.Instance.bestPlayer = currentPlayer;
+            bestScoreText.text = $"Best Score: {currentPlayer}: {m_Points}";
+            SaveData();
         }
+
+        return;
     }
 
+    public void LoadScene(string name)
+    {
+        SceneManager.LoadScene(name);
+    }
 
     public void SaveData()
     {
-
         SaveData data = new SaveData();
 
-        data.currentPlayer = currentPlayer;
-        data.bestScore = bestScore;
-        data.bestPlayer = bestPlayer;
+        data.bestScore = DataManager.Instance.bestScore;
+        data.bestPlayer = DataManager.Instance.bestPlayer;
 
         string json = JsonUtility.ToJson(data);
 
         File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
-    }
-
-
-    public void LoadBestScore()
-    {
-        string path = Application.persistentDataPath + "/savefile.json";
-
-
-        if (File.Exists(path))
-        {
-            string json = File.ReadAllText(path);
-            SaveData data = JsonUtility.FromJson<SaveData>(json);
-
-            currentPlayer = data.bestPlayer;
-        }
-
-        bestScoreText.text = $"Best Score: {bestScore}: {currentPlayer}";
     }
 }
